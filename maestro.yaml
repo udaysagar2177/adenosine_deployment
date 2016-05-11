@@ -9,19 +9,49 @@ name: {{ name }}
 {%- set env_variables = {
         'environment': 'production',
         'DATABASE_NAME': 'adenosine',
-        'DATABASE_HOSTNAME': 'smacrobs_mongo',
-        'DATABASE_PORT': '27017'
+        'DATABASE_HOSTNAME': '52.8.242.203',
+        'DATABASE_PORT': '27017',
+        'RECOMMENDATIONS_DATA_GIST_URL': ''
         } %}
 
-
 ships:
-  smacrobs_ec2:
-    ip: 52.4.187.214
+  smacrobs1:
+    ip: 52.8.79.29
     docker_port: 4243
     timeout: 10
-    #ssh_tunnel:
-    #  user: ubuntu
-    #  key: {{ env.HOME }}/.ssh/id_rsa
+    ssh_tunnel:
+      user: ubuntu
+      key: {{ env.HOME }}/.ssh/id_rsa
+  smacrobs2:
+    ip: 52.9.201.169
+    docker_port: 4243
+    timeout: 10
+    ssh_tunnel:
+      user: ubuntu
+      key: {{ env.HOME }}/.ssh/id_rsa
+  smacrobs3:
+    ip: 52.8.242.203
+    docker_port: 4243
+    timeout: 10
+    ssh_tunnel:
+      user: ubuntu
+      key: {{ env.HOME }}/.ssh/id_rsa
+
+{%- set smacrobs_website_servers = {
+      'smacrobs1': 'smacrobs_website_1',
+      'smacrobs2': 'smacrobs_website_2',
+      'smacrobs3': 'smacrobs_website_3',
+    } %}
+
+{%- set smacrobs_tisensor_rest_servers = {
+      'smacrobs1': 'smacrobs_tisensor_rest_1',
+      'smacrobs2': 'smacrobs_tisensor_rest_2',
+      'smacrobs3': 'smacrobs_tisensor_rest_3'
+    } %}
+
+{%- set smacrobs_mongo_servers = {
+      'smacrobs3': 'smacrobs_mongo_1'
+    } %}
 
 {%- set ship = 'smacrobs_ec2' %}
 
@@ -36,16 +66,17 @@ services:
       {%- for var_name, var_value in env_variables.iteritems() %}
       {{ var_name }}: {{ var_value }}
       {%- endfor %}
-      RECOMMENDATIONS_DATA_GIST_URL: {{ env.RECOMMENDATIONS_DATA_GIST_URL }}
     volumes:
       /maestro/mongo_data/data: /data/db
       /maestro/mongo_data/configdb: /data/configdb
     instances:
-      smacrobs_mongo_1:
+      {%- for ship, instance in smacrobs_mongo_servers.iteritems() %}
+      {{ instance }}:
         ship: {{ ship }}
         ports: {smacrobs_mongo_port: "27017:27017"}
         lifecycle:
           running: [{type: tcp, port: smacrobs_mongo_port, max_wait: 10}]
+      {%- endfor %}
   smacrobs_website:
     image: docker.io/udaysagar/smacrobs_website:latest
     requires: [ smacrobs_mongo ]
@@ -56,13 +87,13 @@ services:
     volumes:
       /maestro/website_maven: /root/.m2
     instances:
-      smacrobs_web_1:
+      {%- for ship, instance in smacrobs_website_servers.iteritems() %}
+      {{ instance }}:
         ship: {{ ship }}
         ports: {smacrobs_website_port: "80:80"}
-        links:
-          smacrobs_mongo_1: smacrobs_mongo
         lifecycle:
           running: [{type: tcp, port: smacrobs_website_port, max_wait: 100}]
+      {%- endfor %}
   tisensor_rest:
     image: docker.io/udaysagar/smacrobs_tisensor_rest:latest
     requires: [ smacrobs_mongo ]
@@ -73,11 +104,11 @@ services:
     volumes:
       /maestro/rest_api_maven: /root/.m2
     instances:
-      tisensor_rest_1:
+      {%- for ship, instance in smacrobs_tisensor_rest_servers.iteritems() %}
+      {{ instance }}:
         ship: {{ ship }}
         ports: {tisensor_rest_port: "8081:8081"}
-        links:
-          smacrobs_mongo_1: smacrobs_mongo
         lifecycle:
           running: [{type: tcp, port: tisensor_rest_port, max_wait: 100}]
+      {%- endfor %}
 {%- endwith %}

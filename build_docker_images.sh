@@ -16,10 +16,10 @@ docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
 
 # Build smacrobs_website Docker image
 (
-        rm -rf adenosine
+    rm -rf adenosine
 	git clone https://github.com/ceeeni/adenosine --branch dev-uday
 	cd adenosine
 	docker build -t udaysagar/smacrobs_website:latest .
 	docker push udaysagar/smacrobs_website
-        rm -rf adenosine
+	rm -rf adenosine
 )
